@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Socket.Io</title>
+</head>
+<body>
+    <h1>App Chat Web Socket</h1>
+    <ul id="msg"></ul>
+    <ul id="audio-list"></ul>
+    <form id="chat-form">
+        <div>
+            <input type="text" id="chat-msg">
+            <button id="send-msg" style="margin-right: 30px;">submit form</button>
+        </div>
+        <div style="display: block; margin-top: 30px; height: 50px; width: 500px; background-color: blanchedalmond;">
+            <input type="file" id="audio-input" style="margin-top: 20px;">
+            <button id="send-audio">send audio</button>
+        </div>
+    </form>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io(); // Gửi socket tới server
+    const chatFrom = document.querySelector('#chat-form');
+    const chatMsg = document.querySelector('#chat-msg');
+    const name = prompt('Enter name to chat');
+    const sendFile = document.getElementById('audio-input');
+    const audioList = document.getElementById('audio-list'); 
+    chatFrom.addEventListener('submit',(e) => {
+        e.preventDefault();
+
+        const msg = chatMsg.value;
+        socket.emit('on-chat', { // Gửi name và msg lên server
+            name: name,
+            message: msg
+        });
+        chatMsg.value = '';
+    });
+
+    sendFile.addEventListener('change', () => {
+        const audioFile = sendFile.files[0];
+        if(audioFile) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const audioContent = e.target.result;
+                socket.emit('send-audio',{name, audioContent});
+            };
+            reader.readAsDataURL(audioFile);
+        }
+    });
+
+    const messageReceive = document.querySelector('#msg'); // Nhận giữ liệu từ socket về render
+    socket.on('user-chat',(data) => {
+        console.log(data,'check data returned');
+        const chatItem = document.createElement('li');
+        chatItem.textContent = `${data.name}: ${data.message}`;
+        messageReceive.appendChild(chatItem);
+    });
+
+    socket.on('received-audio',(data) => { // Nhận dữ liệu của audio từ socket gủi về
+        const audioItem = document.createElement('li');
+        const audioContent = document.createElement('audio');
+        audioContent.src = data.audioContent;
+        audioContent.controls = true;
+        audioItem.textContent = `${data.name} sent audio`;
+        audioItem.appendChild(audioContent);
+        audioList.appendChild(audioItem);
+    })
+</script>
+</html>
